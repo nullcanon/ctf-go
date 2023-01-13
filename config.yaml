@@ -1,0 +1,6 @@
+name: 'block_scan'
+mysql:
+  host: '127.0.0.1:3306'
+  db: 'ctf'
+  password: '123456'
+  user: 'root'
