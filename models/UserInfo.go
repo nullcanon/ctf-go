@@ -1,9 +1,10 @@
 package models
 
 type UserTable struct {
-	Timestamp      int64  `gorm:"column:timestamp"`
-	TotalReward    int64  `gorm:"column:total_reward"`
-	ReceivedReward int64  `gorm:"column:received_reward"`
+	Timestamp      uint64 `gorm:"column:timestamp"`
+	TotalReward    uint64 `gorm:"column:total_reward"`
+	ReceivedReward uint64 `gorm:"column:received_reward"`
+	TradeVolume    uint64 `gorm:"column:trade_volume"`
 	Upper          string `gorm:"column:upper"`
 	Self           string `gorm:"column:self"`
 }
@@ -16,12 +17,10 @@ func (u UserTable) CreateUser(userinfo UserTable) error {
 // 	return db.Where(User{Name: "new_name"}).Attrs(User{Age: 18}).FirstOrCreate(&user)
 // }
 
-func (u UserTable) FetchUserInfo(userinfo* []UserTable) {
+func (u UserTable) FetchUserInfo(userinfo *[]UserTable) {
 	// db.Table("user_table").Where("self = ?", "your_self").First(&userinfo)
 	db.Find(&userinfo)
 }
-
-
 
 // TODO db.Find() 具体参考 chatgpt
 // var users []User

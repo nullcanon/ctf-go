@@ -30,9 +30,10 @@ const (
 )
 
 type User struct {
-	timestamp      int64
-	totalReward    int64
-	receivedReward int64
+	timestamp      uint64
+	totalReward    uint64
+	receivedReward uint64
+	tradeVolume    uint64
 	upper          string
 	self           string
 	Role           Trole
@@ -67,6 +68,7 @@ func (t *Inviter) fatchData() error {
 			timestamp:      user.Timestamp,
 			totalReward:    user.TotalReward,
 			receivedReward: user.ReceivedReward,
+			tradeVolume:    user.TradeVolume,
 			upper:          user.Upper,
 			self:           user.Self,
 			lowers:         lowers,
@@ -128,9 +130,7 @@ func (t *Inviter) BindInvCode(upper string, user string, singerMessage string) (
 		fmt.Println("sigPublicKey error:", err.Error())
 		return "", errors.New("SingerMessage error")
 	}
-	fmt.Println("sigPublicKey :", sigPublicKey)
 	userChecksum := common.HexToAddress(sigPublicKey).Hex()
-	fmt.Println("userChecksum :", userChecksum)
 
 	if common.HexToAddress(user).Hex() != userChecksum {
 		return "", errors.New("SingerMessage not match user")
@@ -156,7 +156,7 @@ func (t *Inviter) BindInvCode(upper string, user string, singerMessage string) (
 			return "", errors.New("Upper is exist")
 		}
 	}
-	time := time.Now().Unix()
+	time := uint64(time.Now().UnixMilli())
 	userInfo.upper = upperChecksum
 	userInfo.self = userChecksum
 	userInfo.timestamp = time
@@ -190,35 +190,40 @@ func (t *Inviter) BindInvCode(upper string, user string, singerMessage string) (
 	return "", nil
 }
 
-type LowersResult struct {
-	Total   int      `json:"total"`
-	Offset  uint     `json:"offset"`
-	Limit   uint     `json:"limit"`
-	Records []string `json:"records"`
+type ReferalsData struct {
+	Address string
+	Time    uint64
+	Volume  uint64
 }
 
-func (t *Inviter) GetLowers(address string, offset uint, limit uint) (LowersResult, error) {
+func (t *Inviter) GetLowers(address string, offset uint64, limit uint64) ([]ReferalsData, uint64, error) {
 	userChecksum := common.HexToAddress(address).Hex()
 	user, ok := t.userinfos[userChecksum]
 	if !ok {
-		return LowersResult{}, fmt.Errorf("user %s not found", userChecksum)
+		return nil, 0, fmt.Errorf("user %s not found", userChecksum)
 	}
-	if offset >= uint(len(user.lowers)) {
-		return LowersResult{}, fmt.Errorf("offset out of range")
+	total := uint64(len(user.lowers))
+	if offset >= total {
+		return nil, 0, fmt.Errorf("offset out of range")
 	}
 	end := offset + limit
-	if end > uint(len(user.lowers)) {
-		end = uint(len(user.lowers))
+	if end > total {
+		end = total
 	}
 
-	lr := LowersResult{
-		Total:   len(user.lowers),
-		Offset:  offset,
-		Limit:   limit,
-		Records: user.lowers[offset:end],
+	rd := []ReferalsData{}
+
+	for _, value := range user.lowers[offset:end] {
+		if lowuser, ok := t.userinfos[value]; ok {
+			rd = append(rd, ReferalsData{
+				Address: value,
+				Time:    lowuser.timestamp,
+				Volume:  lowuser.tradeVolume,
+			})
+		}
 	}
 
-	return lr, nil
+	return rd, total, nil
 }
 
 func (t *Inviter) GetMyUpper(lower string) (string, error) {

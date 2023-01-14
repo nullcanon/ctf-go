@@ -44,12 +44,6 @@ func (a *Api) GetInvData(user string, role int) (InvData, error) {
 	return InvData{}, nil
 }
 
-type ReferalsData struct {
-	Address string
-	Time    uint64
-	Volume  uint64
-}
-
 type TradingData struct {
 	Address    string
 	Volume     uint64
@@ -69,15 +63,18 @@ type DataDetail struct {
 }
 
 func (a *Api) GetInvDataDetail(user string, role int, sub int, offset uint64, limit uint64) (DataDetail, error) {
-	var records interface{}
+	var (
+		records interface{}
+		total   uint64
+		err     error
+	)
 	if sub == 0 {
-		records = []ReferalsData{
-			ReferalsData{
-				Address: "",
-				Time:    0,
-				Volume:  0,
-			},
+		var data []core.ReferalsData
+		data, total, err = core.InviterHandle.GetLowers(user, offset, limit)
+		if err != nil {
+			return DataDetail{}, err
 		}
+		records = data
 	} else if sub == 1 {
 		records = []TradingData{
 			TradingData{
@@ -96,7 +93,7 @@ func (a *Api) GetInvDataDetail(user string, role int, sub int, offset uint64, li
 	}
 
 	return DataDetail{
-		Total:   0,
+		Total:   total,
 		Offset:  offset,
 		Limit:   limit,
 		Records: records,
