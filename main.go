@@ -1,10 +1,11 @@
 package main
 
 import (
-	v1 "ctf/api/v1"
+	"ctf/api"
 	"ctf/config"
-	"ctf/inviter"
+	"ctf/core"
 	"ctf/jsonrpc"
+	"ctf/middleware/Cors"
 	"ctf/models"
 
 	"fmt"
@@ -19,6 +20,7 @@ func setupRouter() *gin.Engine {
 	// Disable Console Color
 	// gin.DisableConsoleColor()
 	r := gin.Default()
+	r.Use(Cors.Cors())
 
 	// Ping test
 	r.GET("/ping", func(c *gin.Context) {
@@ -36,14 +38,15 @@ func setupRouter() *gin.Engine {
 		}
 	})
 
-	r.GET("/code/:address", v1.GetInviteCode)
-
-	inviterHandle, err := inviter.NewInviter()
+	var err error
+	core.InviterHandle, err = core.NewInviter()
 	if err != nil {
 		fmt.Println("inviterHandle init error", err.Error())
 	}
 
-	r.POST("/", func(c *gin.Context) { jsonrpc.ProcessJsonRPC(c, inviterHandle) })
+	apiHandle := api.Api{}
+
+	r.POST("/", func(c *gin.Context) { jsonrpc.ProcessJsonRPC(c, &apiHandle) })
 
 	// Authorized group (uses gin.BasicAuth() middleware)
 	// Same than:
@@ -89,5 +92,5 @@ func main() {
 
 	r := setupRouter()
 	// Listen and Server in 0.0.0.0:8080
-	r.Run(":8888")
+	r.Run(":9999")
 }

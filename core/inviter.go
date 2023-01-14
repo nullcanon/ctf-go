@@ -1,4 +1,4 @@
-package inviter
+package core
 
 import (
 	//   "github.com/kanocz/goginjsonrpc"
@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+
 	// "hash"
 	"time"
 
@@ -18,12 +19,23 @@ import (
 // TODO 改为User模块
 // TODO 优化 mysql 数据插入为异步
 
+var InviterHandle *Inviter
+
+type Trole int
+
+const (
+	NOMAL       = 0
+	PERSONAL    = 1
+	TEAM_LEADER = 2
+)
+
 type User struct {
 	timestamp      int64
 	totalReward    int64
 	receivedReward int64
 	upper          string
 	self           string
+	Role           Trole
 	lowers         []string
 }
 
@@ -52,24 +64,24 @@ func (t *Inviter) fatchData() error {
 		userlower.FatchLowers(user.Self, &lowers)
 		fmt.Println("fatchData user", user.Self)
 		t.userinfos[user.Self] = &User{
-			timestamp      : user.Timestamp,
-			totalReward    : user.TotalReward,
-			receivedReward : user.ReceivedReward,
-			upper          : user.Upper,
-			self           : user.Self,
-			lowers         : lowers,
+			timestamp:      user.Timestamp,
+			totalReward:    user.TotalReward,
+			receivedReward: user.ReceivedReward,
+			upper:          user.Upper,
+			self:           user.Self,
+			lowers:         lowers,
 		}
 
 		if _, ok := t.userinfos[user.Upper]; !ok {
 			var ulowers []string
 			userlower.FatchLowers(user.Upper, &ulowers)
 			t.userinfos[user.Upper] = &User{
-				timestamp      : 0,
-				totalReward    : 0,
-				receivedReward : 0,
-				upper          : "",
-				self           : user.Upper,
-				lowers         : ulowers,
+				timestamp:      0,
+				totalReward:    0,
+				receivedReward: 0,
+				upper:          "",
+				self:           user.Upper,
+				lowers:         ulowers,
 			}
 		}
 	}
@@ -81,15 +93,13 @@ func (t *Inviter) fatchData() error {
 	return nil
 }
 
-
-
 func RecoverPublicKeyAddress(data string, signature string) (string, error) {
 	hexdata := fmt.Sprintf("\x19Ethereum Signed Message:\n%d%s", len(data), data)
 
 	hash := crypto.Keccak256Hash([]byte(hexdata))
 
-	hexmessage,err := hex.DecodeString(signature)
-	if  err != nil {
+	hexmessage, err := hex.DecodeString(signature)
+	if err != nil {
 		return "", err
 	}
 	hexmessage[64] -= 27
@@ -106,7 +116,6 @@ func RecoverPublicKeyAddress(data string, signature string) (string, error) {
 
 func (t *Inviter) BindInvCode(upper string, user string, singerMessage string) (string, error) {
 
-
 	if !common.IsHexAddress(upper) {
 		return "", errors.New("Upper not ethereum address")
 	}
@@ -115,18 +124,20 @@ func (t *Inviter) BindInvCode(upper string, user string, singerMessage string) (
 
 	// Verify the signature message
 	sigPublicKey, err := RecoverPublicKeyAddress(upperChecksum, singerMessage)
-	if err !=nil {
+	if err != nil {
 		fmt.Println("sigPublicKey error:", err.Error())
 		return "", errors.New("SingerMessage error")
 	}
+	fmt.Println("sigPublicKey :", sigPublicKey)
 	userChecksum := common.HexToAddress(sigPublicKey).Hex()
+	fmt.Println("userChecksum :", userChecksum)
 
 	if common.HexToAddress(user).Hex() != userChecksum {
 		return "", errors.New("SingerMessage not match user")
 	}
 
 	// Chek repeated invitations
-	for tmpUser := userChecksum; ;{
+	for tmpUser := userChecksum; ; {
 		if u, ok := t.userinfos[tmpUser]; ok {
 			if u.upper == userChecksum {
 				return "", errors.New("Repeated invitations")
@@ -176,7 +187,7 @@ func (t *Inviter) BindInvCode(upper string, user string, singerMessage string) (
 		Lower: userChecksum,
 	}
 	userlowers.CreateUserLowers(userlowers)
-	return userChecksum, nil
+	return "", nil
 }
 
 type LowersResult struct {
@@ -213,7 +224,7 @@ func (t *Inviter) GetLowers(address string, offset uint, limit uint) (LowersResu
 func (t *Inviter) GetMyUpper(lower string) (string, error) {
 	user, ok := t.userinfos[lower]
 	if !ok {
-		return "", fmt.Errorf("user %s not found", lower)
+		return "", nil
 	}
 	return user.upper, nil
 }
