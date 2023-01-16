@@ -38,6 +38,7 @@ type User struct {
 	self           string
 	Role           Trole
 	lowers         []string
+	// nonce uint64
 }
 
 type Inviter struct {
@@ -81,6 +82,7 @@ func (t *Inviter) fatchData() error {
 				timestamp:      0,
 				totalReward:    0,
 				receivedReward: 0,
+				tradeVolume:    user.TradeVolume,
 				upper:          "",
 				self:           user.Upper,
 				lowers:         ulowers,
@@ -100,7 +102,7 @@ func RecoverPublicKeyAddress(data string, signature string) (string, error) {
 
 	hash := crypto.Keccak256Hash([]byte(hexdata))
 
-	hexmessage, err := hex.DecodeString(signature)
+	hexmessage, err := hex.DecodeString(signature[2:])
 	if err != nil {
 		return "", err
 	}
@@ -134,6 +136,10 @@ func (t *Inviter) BindInvCode(upper string, user string, singerMessage string) (
 
 	if common.HexToAddress(user).Hex() != userChecksum {
 		return "", errors.New("SingerMessage not match user")
+	}
+
+	if userChecksum == upperChecksum {
+		return "", errors.New("Can't invite yourself")
 	}
 
 	// Chek repeated invitations
@@ -232,6 +238,14 @@ func (t *Inviter) GetMyUpper(lower string) (string, error) {
 		return "", nil
 	}
 	return user.upper, nil
+}
+
+func (t *Inviter) GetLowersAmount(address string) uint64 {
+	userChecksum := common.HexToAddress(address).Hex()
+	if upperInfo, ok := t.userinfos[userChecksum]; ok {
+		return uint64(len(upperInfo.lowers))
+	}
+	return 0
 }
 
 // func (t *Inviter) getReLowersTradeVolume(address string) uint {

@@ -41,7 +41,14 @@ type InvData struct {
 }
 
 func (a *Api) GetInvData(user string, role int) (InvData, error) {
-	return InvData{}, nil
+	invAmount := core.InviterHandle.GetLowersAmount(user)
+	return InvData{
+		Received:       0,
+		Available:      0,
+		InvAmount:      invAmount,
+		LowTradeAmount: 0,
+		LowTradeVolume: 0,
+	}, nil
 }
 
 type TradingData struct {
