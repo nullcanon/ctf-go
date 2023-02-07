@@ -1,9 +1,16 @@
 package models
 
+
+import (
+	"errors"
+	"github.com/jinzhu/gorm"
+)
+
 type UserTable struct {
 	Timestamp      uint64 `gorm:"column:timestamp"`
 	TotalReward    uint64 `gorm:"column:total_reward"`
 	ReceivedReward uint64 `gorm:"column:received_reward"`
+	LpReward       uint64 `gorm:"column:lp_reward"`
 	TradeVolume    uint64 `gorm:"column:trade_volume"`
 	Upper          string `gorm:"column:upper"`
 	Self           string `gorm:"column:self"`
@@ -12,6 +19,47 @@ type UserTable struct {
 func (u UserTable) CreateUser(userinfo UserTable) error {
 	return db.Create(&userinfo).Error
 }
+
+
+func (u UserTable) UpdateUserInv(userinfo UserTable) error {
+	result := db.First(&userinfo, "self = ?", userinfo.Self)
+
+	if result.Error == nil {
+		db.Model(&UserTable{}).Where("self = ?", userinfo.Self).Update("upper", userinfo.Upper)
+	}
+
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return u.CreateUser(userinfo)
+	} else {
+		return result.Error
+	}
+	return nil
+}
+
+func (u UserTable) UpdateTradeVolume(userinfo UserTable) error {
+	result := db.First(&userinfo, "self = ?", userinfo.Self)
+
+	if result.Error == nil {
+		db.Model(&UserTable{}).Where("self = ?", userinfo.Self).Update("upper", userinfo.TradeVolume)
+	}
+
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return u.CreateUser(userinfo)
+	} else {
+		return result.Error
+	}
+	return nil
+}
+
+// func (u UserTable) UpdateTotalReward(userinfo UserTable) error {
+// }
+
+// func (u UserTable) UpdateReceivedReward(userinfo UserTable) error {
+// }
+
+// func (u UserTable) UpdateLpReward(userinfo UserTable) error {
+// }
+
 
 // func (u UserTable) FirstOrCreateUser(self string, userinfo UserTable) error {
 // 	return db.Where(User{Name: "new_name"}).Attrs(User{Age: 18}).FirstOrCreate(&user)

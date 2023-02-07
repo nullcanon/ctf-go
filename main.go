@@ -7,6 +7,7 @@ import (
 	"ctf/jsonrpc"
 	"ctf/middleware/Cors"
 	"ctf/models"
+	"ctf/blockscan"
 
 	"fmt"
 	"net/http"
@@ -19,6 +20,9 @@ var db = make(map[string]string)
 func setupRouter() *gin.Engine {
 	// Disable Console Color
 	// gin.DisableConsoleColor()
+
+	go blockscan.ScanTradeVolume()
+
 	r := gin.Default()
 	r.Use(Cors.Cors())
 

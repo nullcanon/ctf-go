@@ -4,3 +4,8 @@ mysql:
   db: 'ctf'
   password: '123456'
   user: 'root'
+test_net:
+  ctf_pair: '0x0bAF10bCF766f47F5F35877799B419792bE1cB5f'
+  ctf_token: '0x29a3DAa1bf8DE08a8afE3e29E36Fa2797f7a37b5'
+  url: ''
+

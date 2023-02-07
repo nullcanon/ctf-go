@@ -186,7 +186,7 @@ func (t *Inviter) BindInvCode(upper string, user string, singerMessage string) (
 		Upper:          upperChecksum,
 		Self:           userChecksum,
 	}
-	usertable.CreateUser(usertable)
+	usertable.UpdateUserInv(usertable)
 
 	userlowers := models.UserLowersTable{
 		Self:  upperChecksum,
