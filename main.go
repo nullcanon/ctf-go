@@ -22,6 +22,7 @@ func setupRouter() *gin.Engine {
 	// gin.DisableConsoleColor()
 
 	go blockscan.ScanTradeVolume()
+	go blockscan.ScanLpRewards()
 
 	r := gin.Default()
 	r.Use(Cors.Cors())
