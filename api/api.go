@@ -51,6 +51,12 @@ func (a *Api) GetInvData(user string, role int) (InvData, error) {
 	}, nil
 }
 
+type RankDetail struct {
+	Id      uint64
+	Address string
+	Amount  string
+}
+
 type TradingData struct {
 	Address    string
 	Volume     string
@@ -84,7 +90,7 @@ func (a *Api) GetInvDataDetail(user string, role int, sub int, offset uint64, li
 		records = data
 	} else if sub == 1 {
 		records = []TradingData{
-			TradingData{
+			{
 				Address:    "",
 				Volume:     "0",
 				Commission: "0",
@@ -92,7 +98,7 @@ func (a *Api) GetInvDataDetail(user string, role int, sub int, offset uint64, li
 		}
 	} else {
 		records = []Commission{
-			Commission{
+			{
 				Time:          0,
 				ExtractAmount: "0",
 			},
@@ -112,19 +118,19 @@ func (a *Api) GetNodesRewards() (uint64, error) {
 }
 
 type BuyBackDataDetail struct {
-	id        uint64
-	timestamp uint64
-	amount    string
-	link      string
+	Id        uint64
+	Timestamp uint64
+	Amount    string
+	Link      string
 }
 
 func (a *Api) GetBuyBackDetil() ([]BuyBackDataDetail, error) {
 	return []BuyBackDataDetail{
-		BuyBackDataDetail{
-			id:        0,
-			timestamp: 0,
-			amount:    "0",
-			link:      "https://bscscan.com/tx/0x0e2491b362b750edac36c61a215425d18d7ac8d37c9373bd4110f1005ab046a2",
+		{
+			Id:        0,
+			Timestamp: 0,
+			Amount:    "0",
+			Link:      "https://bscscan.com/tx/0x0e2491b362b750edac36c61a215425d18d7ac8d37c9373bd4110f1005ab046a2",
 		},
 	}, nil
 }
@@ -133,18 +139,12 @@ func (a *Api) GetLpAwardedBonus() (string, error) {
 	return "0", nil
 }
 
-type RankDetail struct {
-	id      uint64
-	address string
-	amount  string
-}
-
 func (a *Api) GetLpBonusRank(offset uint64, limit uint64) (DataDetail, error) {
 	records := []RankDetail{
-		RankDetail{
-			id:      0,
-			address: " ",
-			amount:  "0",
+		{
+			Id:      0,
+			Address: " ",
+			Amount:  "0",
 		},
 	}
 
@@ -161,18 +161,30 @@ func (a *Api) GetCTFCoinTradeVolume() (string, error) {
 }
 
 func (a *Api) GetACoinRewardRank(offset uint64, limit uint64) (DataDetail, error) {
-	records := []RankDetail{
-		RankDetail{
-			id:      0,
-			address: "",
-			amount:  "0",
-		},
+
+	var (
+		records interface{}
+		total   uint64
+		err     error
+	)
+
+	{
+
+		records = []RankDetail{
+			{
+				Id:      1,
+				Address: "0x11251d54d3bb69edbC1fF24a5ebfC25685382109",
+				Amount:  "0",
+			},
+		}
 	}
 
+	total = 1
+
 	return DataDetail{
-		Total:   0,
+		Total:   total,
 		Offset:  offset,
 		Limit:   limit,
 		Records: records,
-	}, nil
+	}, err
 }
