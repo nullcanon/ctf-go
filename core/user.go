@@ -13,6 +13,7 @@ import (
 
 	common "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/shopspring/decimal"
 	// crypto1 "github.com/ubiq/go-ubiq/crypto"
 )
 
@@ -31,12 +32,15 @@ const (
 
 type User struct {
 	timestamp      uint64
-	totalReward    uint64
-	receivedReward uint64
-	tradeVolume    uint64
+	totalReward    decimal.Decimal // 总奖励
+	receivedReward decimal.Decimal // 已领取奖励
+	tradeVolume    decimal.Decimal // 个人交易量
+	lpRewards      decimal.Decimal // lp奖励
+	tradeVolLowers decimal.Decimal // 直推交易量
+	tradeVolAll    decimal.Decimal // 伞下所有交易量
 	upper          string
 	self           string
-	Role           Trole
+	role           Trole
 	lowers         []string
 	// nonce uint64
 }
@@ -67,9 +71,12 @@ func (t *Inviter) fatchData() error {
 		fmt.Println("fatchData user", user.Self)
 		t.userinfos[user.Self] = &User{
 			timestamp:      user.Timestamp,
-			totalReward:    user.TotalReward,
-			receivedReward: user.ReceivedReward,
-			tradeVolume:    user.TradeVolume,
+			totalReward:    decimal.RequireFromString(user.TotalReward),
+			receivedReward: decimal.RequireFromString(user.ReceivedReward),
+			tradeVolume:    decimal.RequireFromString(user.TradeVolume),
+			lpRewards:      decimal.RequireFromString(user.LpRewards),
+			tradeVolLowers: decimal.RequireFromString(user.TradeVolLowers),
+			tradeVolAll:    decimal.RequireFromString(user.TradeVolAll),
 			upper:          user.Upper,
 			self:           user.Self,
 			lowers:         lowers,
@@ -80,9 +87,12 @@ func (t *Inviter) fatchData() error {
 			userlower.FatchLowers(user.Upper, &ulowers)
 			t.userinfos[user.Upper] = &User{
 				timestamp:      0,
-				totalReward:    0,
-				receivedReward: 0,
-				tradeVolume:    user.TradeVolume,
+				totalReward:    decimal.NewFromInt(0),
+				receivedReward: decimal.NewFromInt(0),
+				tradeVolume:    decimal.RequireFromString(user.TradeVolume),
+				lpRewards:      decimal.NewFromInt(0),
+				tradeVolLowers: decimal.NewFromInt(0),
+				tradeVolAll:    decimal.NewFromInt(0),
 				upper:          "",
 				self:           user.Upper,
 				lowers:         ulowers,
@@ -181,8 +191,8 @@ func (t *Inviter) BindInvCode(upper string, user string, singerMessage string) (
 	// up to database
 	usertable := models.UserTable{
 		Timestamp:      time,
-		TotalReward:    0,
-		ReceivedReward: 0,
+		TotalReward:    "0",
+		ReceivedReward: "0",
 		Upper:          upperChecksum,
 		Self:           userChecksum,
 	}
@@ -196,10 +206,91 @@ func (t *Inviter) BindInvCode(upper string, user string, singerMessage string) (
 	return "", nil
 }
 
+func (t *Inviter) UpdateTradeVolume(user string, amount decimal.Decimal) {
+	userChecksum := common.HexToAddress(user).Hex()
+	if userInfo, ok := t.userinfos[userChecksum]; ok {
+		// 先更新自己的交易量
+		userInfo.tradeVolume = userInfo.tradeVolume.Add(amount)
+		// 如果自己交易量达到5000刀，更新角色为 PERSONAL
+		if userInfo.tradeVolume.GreaterThanOrEqual(decimal.NewFromInt(5000)) {
+			userInfo.role = PERSONAL
+		}
+
+		if userInfo.upper == "" {
+			return
+		}
+		// 更新上级的直推奖励 tradeVolLowers
+		if upperInfo, ok := t.userinfos[userInfo.upper]; ok {
+			upperInfo.tradeVolLowers.Add(amount)
+			if upperInfo.tradeVolLowers.GreaterThanOrEqual(decimal.NewFromInt(100000)) {
+				upperInfo.role = TEAM_LEADER
+			}
+
+			// 更新上级链条的伞下收益
+			// TODO 一笔交易量计入直推奖励的同时，计入散装奖励吗，这里的做法暂时计入
+			tmpAddress := userInfo.upper
+			for true {
+				info := t.userinfos[tmpAddress]
+				if info.upper == "" {
+					break
+				}
+				info.tradeVolAll.Add(amount)
+				tmpAddress = info.upper
+			}
+
+			// 如果上面todo不计入 upperInfo.tradeVolAll -= amount
+		}
+	} else {
+		// 只更新自己的交易量
+		userInfo := &User{
+			tradeVolume: amount,
+		}
+		t.userinfos[userChecksum] = userInfo
+	}
+	// 更新数据库
+}
+
+func (t *Inviter) UpdateLpRewards(user string, amount decimal.Decimal) {
+	userChecksum := common.HexToAddress(user).Hex()
+	if userInfo, ok := t.userinfos[userChecksum]; ok {
+		// 更新自己的lp奖励
+		userInfo.lpRewards.Add(amount)
+	} else {
+		userInfo := &User{
+			lpRewards: amount,
+		}
+		t.userinfos[userChecksum] = userInfo
+	}
+	// 更新数据库
+}
+
+// 添加排序代码
+// 参考
+// type User struct {
+// 	ID       int
+// 	Name     string
+// 	Score    int
+//   }
+
+//   func main() {
+// 	users := []User{
+// 	  {ID: 1, Name: "Tom", Score: 90},
+// 	  {ID: 2, Name: "John", Score: 80},
+// 	  {ID: 3, Name: "Jane", Score: 100},
+// 	}
+
+// 	sort.Slice(users, func(i, j int) bool {
+// 	  return users[i].Score > users[j].Score
+// 	})
+
+// 	for i, user := range users {
+// 	  fmt.Printf("Rank %d: %s, Score: %d\n", i+1, user.Name, user.Score)
+// 	}
+
 type ReferalsData struct {
 	Address string
 	Time    uint64
-	Volume  uint64
+	Volume  decimal.Decimal
 }
 
 func (t *Inviter) GetLowers(address string, offset uint64, limit uint64) ([]ReferalsData, uint64, error) {
@@ -247,6 +338,14 @@ func (t *Inviter) GetLowersAmount(address string) uint64 {
 	}
 	return 0
 }
+
+// func (t *Inviter) GetTotalLpRewards() uint64 {
+
+// }
+
+// func (t *Inviter) GetLpRewardsRank(offset uint64, limit uint64) (uint64, []string) {
+//	total :=
+// }
 
 // func (t *Inviter) getReLowersTradeVolume(address string) uint {
 

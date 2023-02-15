@@ -1,25 +1,27 @@
 package models
 
-
 import (
 	"errors"
+
 	"github.com/jinzhu/gorm"
 )
 
 type UserTable struct {
 	Timestamp      uint64 `gorm:"column:timestamp"`
-	TotalReward    uint64 `gorm:"column:total_reward"`
-	ReceivedReward uint64 `gorm:"column:received_reward"`
-	LpReward       uint64 `gorm:"column:lp_reward"`
-	TradeVolume    uint64 `gorm:"column:trade_volume"`
-	Upper          string `gorm:"column:upper"`
-	Self           string `gorm:"column:self"`
+	TotalReward    string `gorm:"column:total_reward; default:'0'"`
+	ReceivedReward string `gorm:"column:received_reward; default:'0'"`
+	LpRewards      string `gorm:"column:lp_rewards; default:'0'"`
+	TradeVolume    string `gorm:"column:trade_volume; default:'0'"`
+	TradeVolLowers string `gorm:"column:trade_vol_lowers; default:'0'"`
+	TradeVolAll    string `gorm:"column:trade_vol_all; default:'0'"`
+	Role           int    `gorm:"column:role"`
+	Upper          string `gorm:"column:upper; default:'0'"`
+	Self           string `gorm:"column:self; default:'0'"`
 }
 
 func (u UserTable) CreateUser(userinfo UserTable) error {
 	return db.Create(&userinfo).Error
 }
-
 
 func (u UserTable) UpdateUserInv(userinfo UserTable) error {
 	result := db.First(&userinfo, "self = ?", userinfo.Self)
@@ -59,7 +61,6 @@ func (u UserTable) UpdateTradeVolume(userinfo UserTable) error {
 
 // func (u UserTable) UpdateLpReward(userinfo UserTable) error {
 // }
-
 
 // func (u UserTable) FirstOrCreateUser(self string, userinfo UserTable) error {
 // 	return db.Where(User{Name: "new_name"}).Attrs(User{Age: 18}).FirstOrCreate(&user)

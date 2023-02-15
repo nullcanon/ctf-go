@@ -38,6 +38,9 @@ func lpRewardsHandle(from, to int, receiptLogs []blockchain.IReceiptLog, isUpToH
 		weiamount, _ := plugin.HexToDecimal(log.GetData())
 		logrus.Infof("recv amount: %v", utils.WeiToEth(weiamount))
 	}
+
+	// TODO 同步数据，同步区块高度
+	// 数据和区块高度同时同步
 	return nil
 }
 

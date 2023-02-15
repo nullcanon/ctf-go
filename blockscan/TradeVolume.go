@@ -7,18 +7,19 @@ package blockscan
 import (
 	"context"
 	"ctf/utils"
-	"github.com/sirupsen/logrus"
-	"github.com/ethereum/go-ethereum/common"
+
 	ethereum_watcher "github.com/HydroProtocol/ethereum-watcher"
 	"github.com/HydroProtocol/ethereum-watcher/blockchain"
 	"github.com/HydroProtocol/ethereum-watcher/plugin"
 	"github.com/HydroProtocol/ethereum-watcher/rpc"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/sirupsen/logrus"
 )
 
 const (
-	CTF_CONTRACT = "0x29a3DAa1bf8DE08a8afE3e29E36Fa2797f7a37b5"
-	USDT_BLACK = "0xb5151A092593ca413fC8782Cd92904F4f3d5F2f8" //代币合约中间地址
-	USDT = "0x8538d1641ad855db9e36fc1c7dc84236f104bb4a"
+	CTF_CONTRACT  = "0x29a3DAa1bf8DE08a8afE3e29E36Fa2797f7a37b5"
+	USDT_BLACK    = "0xb5151A092593ca413fC8782Cd92904F4f3d5F2f8" //代币合约中间地址
+	USDT          = "0x8538d1641ad855db9e36fc1c7dc84236f104bb4a"
 	CTF_USDT_PAIR = "0x0bAF10bCF766f47F5F35877799B419792bE1cB5f"
 )
 
@@ -28,17 +29,17 @@ var ethrpc *rpc.EthBlockChainRPC
 
 func tradeVolumeHandle(from, to int, receiptLogs []blockchain.IReceiptLog, isUpToHighestBlock bool) error {
 	logrus.Infof("len: %v", len(receiptLogs))
-	
+
 	for _, log := range receiptLogs {
 
 		logrus.Infof("BlockNum: %v", log.GetBlockNum())
-		
+
 		Topics := log.GetTopics()
 		// 获取 from topic[1] 和 to topic[2] 地址
 		from := common.HexToAddress(Topics[1]).String()
 		to := common.HexToAddress(Topics[2]).String()
 		var user string
-		if (from == CTF_USDT_PAIR || to == CTF_USDT_PAIR) && !(to == CTF_CONTRACT || from == CTF_CONTRACT){
+		if (from == CTF_USDT_PAIR || to == CTF_USDT_PAIR) && !(to == CTF_CONTRACT || from == CTF_CONTRACT) {
 			logrus.Infof("topic: %s", Topics[0])
 			logrus.Infof("hash: %s", log.GetTransactionHash())
 			logrus.Infof("from: %s", from)
@@ -55,7 +56,7 @@ func tradeVolumeHandle(from, to int, receiptLogs []blockchain.IReceiptLog, isUpT
 						subTopics := subLog.GetTopics()
 						subFrom := common.HexToAddress(subTopics[1]).String()
 						subTo := common.HexToAddress(subTopics[2]).String()
-						if (subFrom == CTF_USDT_PAIR || subTo == CTF_USDT_PAIR) && subTo != USDT_BLACK{
+						if (subFrom == CTF_USDT_PAIR || subTo == CTF_USDT_PAIR) && subTo != USDT_BLACK {
 							usdtWeiamount, _ := plugin.HexToDecimal(subLog.GetData())
 							logrus.Infof("Usdt amount: %v", utils.WeiToEth(usdtWeiamount))
 						}
@@ -68,8 +69,8 @@ func tradeVolumeHandle(from, to int, receiptLogs []blockchain.IReceiptLog, isUpT
 				user = from
 			}
 			logrus.Infof("user: %v", common.HexToAddress(user))
-
 		}
+		// TODO 同步数据，同步区块高度
 	}
 	return nil
 }
