@@ -2,8 +2,10 @@ package models
 
 import (
 	"errors"
+	"strconv"
 
 	"github.com/jinzhu/gorm"
+	"github.com/sirupsen/logrus"
 )
 
 type UserTable struct {
@@ -98,9 +100,6 @@ func (u UserTable) UpdateTradeVolAll() error {
 	}
 }
 
-// func (u UserTable) UpdateTotalReward(userinfo UserTable) error {
-// }
-
 // func (u UserTable) UpdateReceivedReward(userinfo UserTable) error {
 // }
 
@@ -116,6 +115,56 @@ func (u UserTable) UpdateLpRewards() error {
 	} else {
 		return result.Error
 	}
+}
+
+func (u UserTable) GetLpRewardsRank(offset uint64, limit uint64) ([]UserTable, int64, error) {
+	var users []UserTable
+	result := db.Order("CAST(lp_rewards AS DECIMAL(10,6)) DESC").Offset(offset).Limit(limit).Find(&users)
+	if result.Error != nil {
+		// 处理错误
+		return nil, 0, result.Error
+	}
+
+	var count int64
+	result = db.Model(&UserTable{}).Where("cast(lp_rewards as double precision) > ?", 0).Count(&count)
+	if result.Error != nil {
+		return nil, 0, result.Error
+	}
+	return users, count, nil
+}
+
+func (u UserTable) GetTotalRewardRanks(offset uint64, limit uint64) ([]UserTable, int64, error) {
+	var users []UserTable
+	result := db.Order("CAST(total_reward AS DECIMAL(10,6)) DESC").Offset(offset).Limit(limit).Find(&users)
+	if result.Error != nil {
+		return nil, 0, result.Error
+	}
+
+	var count int64
+	result = db.Model(&UserTable{}).Where("cast(total_reward as double precision) > ?", 0).Count(&count)
+	if result.Error != nil {
+		return nil, 0, result.Error
+	}
+	return users, count, nil
+}
+
+type TradeVolumeResult struct {
+	Total float64
+}
+
+func (u UserTable) GetTradeVolumeTotal() (string, error) {
+
+	// var tradeVolumeResult TradeVolumeResult
+	var tradeVolumeResult TradeVolumeResult
+	result := db.Model(&UserTable{}).Select("sum(cast(trade_volume as double precision)) as total").Scan(&tradeVolumeResult)
+	if result.Error != nil {
+		// 处理错误
+		return "0", result.Error
+	}
+
+	logrus.Infof("GetTradeVolumeTotal ", tradeVolumeResult.Total)
+
+	return strconv.FormatFloat(tradeVolumeResult.Total, 'f', 2, 64), nil
 }
 
 // func (u UserTable) FirstOrCreateUser(self string, userinfo UserTable) error {

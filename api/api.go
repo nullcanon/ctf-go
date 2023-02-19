@@ -2,6 +2,7 @@ package api
 
 import (
 	"ctf/core"
+	"ctf/models"
 )
 
 type Api struct {
@@ -140,51 +141,47 @@ func (a *Api) GetLpAwardedBonus() (string, error) {
 }
 
 func (a *Api) GetLpBonusRank(offset uint64, limit uint64) (DataDetail, error) {
-	records := []RankDetail{
-		{
-			Id:      0,
-			Address: " ",
-			Amount:  "0",
-		},
+
+	sortedData, total, _ := models.UserTable{}.GetLpRewardsRank(offset, limit)
+
+	rankDetails := make([]RankDetail, len(sortedData))
+	for i, data := range sortedData {
+		rankDetails[i] = RankDetail{
+			Id:      offset + uint64(i+1), // 排名从 1 开始
+			Address: data.Self,
+			Amount:  data.LpRewards,
+		}
 	}
 
 	return DataDetail{
-		Total:   0,
+		Total:   uint64(total),
 		Offset:  offset,
 		Limit:   limit,
-		Records: records,
+		Records: rankDetails,
 	}, nil
 }
 
 func (a *Api) GetCTFCoinTradeVolume() (string, error) {
-	return "332849.32", nil
+	return models.UserTable{}.GetTradeVolumeTotal()
 }
 
 func (a *Api) GetACoinRewardRank(offset uint64, limit uint64) (DataDetail, error) {
 
-	var (
-		records interface{}
-		total   uint64
-		err     error
-	)
+	sortedData, total, err := models.UserTable{}.GetTotalRewardRanks(offset, limit)
 
-	{
-
-		records = []RankDetail{
-			{
-				Id:      1,
-				Address: "0x11251d54d3bb69edbC1fF24a5ebfC25685382109",
-				Amount:  "0",
-			},
+	rankDetails := make([]RankDetail, len(sortedData))
+	for i, data := range sortedData {
+		rankDetails[i] = RankDetail{
+			Id:      offset + uint64(i+1), // 排名从 1 开始
+			Address: data.Self,
+			Amount:  data.TotalReward,
 		}
 	}
 
-	total = 1
-
 	return DataDetail{
-		Total:   total,
+		Total:   uint64(total),
 		Offset:  offset,
 		Limit:   limit,
-		Records: records,
+		Records: rankDetails,
 	}, err
 }

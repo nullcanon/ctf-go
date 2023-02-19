@@ -72,7 +72,6 @@ func (t *Inviter) fatchData() error {
 		var lowers []string
 		userlower := models.UserLowersTable{}
 		userlower.FatchLowers(user.Self, &lowers)
-		fmt.Println("fatchData user", user.Self)
 		t.userinfos[user.Self] = &User{
 			timestamp:      user.Timestamp,
 			totalReward:    decimal.RequireFromString(user.TotalReward),
@@ -104,10 +103,6 @@ func (t *Inviter) fatchData() error {
 		}
 	}
 
-	for self, user := range t.userinfos {
-		fmt.Printf("Self: %s, Timestamp: %d, Total Reward: %d, Received Reward: %d, Upper: %s, s: %s, Lowers: %v\n",
-			self, user.timestamp, user.totalReward, user.receivedReward, user.upper, user.self, user.lowers)
-	}
 	return nil
 }
 
@@ -214,8 +209,8 @@ func (t *Inviter) UpdateTradeVolume(user string, amount decimal.Decimal) error {
 	var userInfo *User
 	userChecksum := common.HexToAddress(user).Hex()
 	logrus.Infof("UpdateTradeVolume")
-
-	if userInfo, ok := t.userinfos[userChecksum]; ok {
+	userInfo, ok := t.userinfos[userChecksum]
+	if ok {
 		// 先更新自己的交易量
 		userInfo.tradeVolume = userInfo.tradeVolume.Add(amount)
 		// 如果自己交易量达到5000刀，更新角色为 PERSONAL
@@ -262,7 +257,7 @@ func (t *Inviter) UpdateTradeVolume(user string, amount decimal.Decimal) error {
 
 	} else {
 		// 只更新自己的交易量
-		userInfo := &User{
+		userInfo = &User{
 			tradeVolume: amount,
 		}
 		t.userinfos[userChecksum] = userInfo
@@ -340,6 +335,9 @@ func (t *Inviter) ProcessPresellUsersRewards() {
 		fmt.Println(user)
 	}
 
+}
+
+func (t *Inviter) GetTotalRewardRank(offset uint64, limit uint64) {
 }
 
 // 添加排序代码
