@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"sync"
 
 	// "hash"
 	"time"
@@ -25,6 +26,12 @@ import (
 // TODO 优化 mysql 数据插入为异步
 
 var InviterHandle *Inviter
+
+var selfRate = decimal.NewFromFloat(0.2)
+var lowerRate = decimal.NewFromFloat(0.5)
+var treeRate = decimal.NewFromFloat(0.3)
+var feeRate = decimal.NewFromFloat(0.01)
+var subCoinPrice = decimal.NewFromFloat(0.158)
 
 type Trole int
 
@@ -51,6 +58,7 @@ type User struct {
 
 type Inviter struct {
 	userinfos map[string]*User
+	mutex     sync.Mutex
 }
 
 func NewInviter() (*Inviter, error) {
@@ -65,6 +73,8 @@ func NewInviter() (*Inviter, error) {
 }
 
 func (t *Inviter) fatchData() error {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
 	var users []models.UserTable
 	userinfo := models.UserTable{}
 	userinfo.FetchUserInfo(&users)
@@ -128,7 +138,8 @@ func RecoverPublicKeyAddress(data string, signature string) (string, error) {
 }
 
 func (t *Inviter) BindInvCode(upper string, user string, singerMessage string) (string, error) {
-
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
 	if !common.IsHexAddress(upper) {
 		return "", errors.New("Upper not ethereum address")
 	}
@@ -153,6 +164,7 @@ func (t *Inviter) BindInvCode(upper string, user string, singerMessage string) (
 
 	// Chek repeated invitations
 	for tmpUser := userChecksum; ; {
+		// TODO 互相绑定时这一行崩溃
 		if u, ok := t.userinfos[tmpUser]; ok {
 			if u.upper == userChecksum {
 				return "", errors.New("Repeated invitations")
@@ -205,7 +217,19 @@ func (t *Inviter) BindInvCode(upper string, user string, singerMessage string) (
 	return "", nil
 }
 
+// 可领取子币数量= 返利类型对应用户的币种交易金额 * 1% * 不同类型返佣比例 / 0.158
+// 0.158为子币开盘价格
+// 个人返佣比例：20%
+// 直推返佣比例：50%
+// 社区节点返佣比例：30%
+
+func getSubCoinAmount(tradeAmount decimal.Decimal, rate decimal.Decimal) decimal.Decimal {
+	return tradeAmount.Mul(feeRate).Mul(rate).Div(subCoinPrice)
+}
+
 func (t *Inviter) UpdateTradeVolume(user string, amount decimal.Decimal) error {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
 	var userInfo *User
 	userChecksum := common.HexToAddress(user).Hex()
 	logrus.Infof("UpdateTradeVolume")
@@ -213,8 +237,9 @@ func (t *Inviter) UpdateTradeVolume(user string, amount decimal.Decimal) error {
 	if ok {
 		// 先更新自己的交易量
 		userInfo.tradeVolume = userInfo.tradeVolume.Add(amount)
-		// 如果自己交易量达到5000刀，更新角色为 PERSONAL
-		if userInfo.tradeVolume.GreaterThanOrEqual(decimal.NewFromInt(5000)) {
+		userInfo.totalReward = getSubCoinAmount(amount, selfRate)
+		// 如果自己交易量达到3000刀，更新角色为 PERSONAL
+		if userInfo.tradeVolume.GreaterThanOrEqual(decimal.NewFromInt(3000)) {
 			userInfo.role = PERSONAL
 		}
 
@@ -222,7 +247,8 @@ func (t *Inviter) UpdateTradeVolume(user string, amount decimal.Decimal) error {
 			// 更新上级的直推奖励 tradeVolLowers
 			if upperInfo, ok := t.userinfos[userInfo.upper]; ok {
 				upperInfo.tradeVolLowers = upperInfo.tradeVolLowers.Add(amount)
-				if upperInfo.tradeVolLowers.GreaterThanOrEqual(decimal.NewFromInt(100000)) {
+				upperInfo.totalReward = getSubCoinAmount(amount, lowerRate)
+				if upperInfo.tradeVolLowers.GreaterThanOrEqual(decimal.NewFromInt(30000)) {
 					upperInfo.role = TEAM_LEADER
 				}
 
@@ -239,10 +265,11 @@ func (t *Inviter) UpdateTradeVolume(user string, amount decimal.Decimal) error {
 				tmpAddress := userInfo.upper
 				for true {
 					info := t.userinfos[tmpAddress]
-					if info.upper == "" {
+					if info.upper == "" || info.role == TEAM_LEADER {
 						break
 					}
 					info.tradeVolAll = info.tradeVolAll.Add(amount)
+					info.totalReward = getSubCoinAmount(amount, treeRate)
 					tmpAddress = info.upper
 
 					tmpuppertable := models.UserTable{
@@ -258,8 +285,10 @@ func (t *Inviter) UpdateTradeVolume(user string, amount decimal.Decimal) error {
 	} else {
 		// 只更新自己的交易量
 		userInfo = &User{
+			self:        userChecksum,
 			tradeVolume: amount,
 		}
+		userInfo.totalReward = getSubCoinAmount(amount, selfRate)
 		t.userinfos[userChecksum] = userInfo
 	}
 	// 更新数据库
@@ -273,6 +302,8 @@ func (t *Inviter) UpdateTradeVolume(user string, amount decimal.Decimal) error {
 }
 
 func (t *Inviter) UpdateLpRewards(user string, amount decimal.Decimal) error {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
 	userChecksum := common.HexToAddress(user).Hex()
 	logrus.Infof("UpdateLpRewards")
 	logrus.Infof("UpdateLpRewards amount %v", amount.String())
@@ -304,6 +335,8 @@ type Users struct {
 }
 
 func (t *Inviter) ProcessPresellUsersRewards() {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
 	// 1、读取json用户列表
 	jsonFile, err := os.Open("./files/presell_users.json")
 	defer jsonFile.Close()
@@ -338,6 +371,7 @@ func (t *Inviter) ProcessPresellUsersRewards() {
 }
 
 func (t *Inviter) GetTotalRewardRank(offset uint64, limit uint64) {
+
 }
 
 // 添加排序代码
