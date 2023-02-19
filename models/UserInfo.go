@@ -156,7 +156,7 @@ func (u UserTable) GetTradeVolumeTotal() (string, error) {
 
 	// var tradeVolumeResult TradeVolumeResult
 	var tradeVolumeResult TradeVolumeResult
-	result := db.Model(&UserTable{}).Select("sum(cast(trade_volume as double precision)) as total").Scan(&tradeVolumeResult)
+	result := db.Model(&UserTable{}).Select("sum(cast(trade_volume as DECIMAL(10,6))) as total").Scan(&tradeVolumeResult)
 	if result.Error != nil {
 		// 处理错误
 		return "0", result.Error
