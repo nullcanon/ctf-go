@@ -47,6 +47,7 @@ func setupRouter() *gin.Engine {
 	if err != nil {
 		fmt.Println("inviterHandle init error", err.Error())
 	}
+	core.InviterHandle.ProcessPresellUsersRewards()
 
 	apiHandle := api.Api{}
 

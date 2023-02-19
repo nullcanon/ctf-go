@@ -5,8 +5,11 @@ import (
 	//   "github.com/gin-gonic/gin"
 	"ctf/models"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"os"
 
 	// "hash"
 	"time"
@@ -14,6 +17,7 @@ import (
 	common "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/shopspring/decimal"
+	"github.com/sirupsen/logrus"
 	// crypto1 "github.com/ubiq/go-ubiq/crypto"
 )
 
@@ -89,7 +93,7 @@ func (t *Inviter) fatchData() error {
 				timestamp:      0,
 				totalReward:    decimal.NewFromInt(0),
 				receivedReward: decimal.NewFromInt(0),
-				tradeVolume:    decimal.RequireFromString(user.TradeVolume),
+				tradeVolume:    decimal.NewFromInt(0),
 				lpRewards:      decimal.NewFromInt(0),
 				tradeVolLowers: decimal.NewFromInt(0),
 				tradeVolAll:    decimal.NewFromInt(0),
@@ -196,7 +200,7 @@ func (t *Inviter) BindInvCode(upper string, user string, singerMessage string) (
 		Upper:          upperChecksum,
 		Self:           userChecksum,
 	}
-	usertable.UpdateUserInv(usertable)
+	usertable.UpdateUserInv()
 
 	userlowers := models.UserLowersTable{
 		Self:  upperChecksum,
@@ -206,8 +210,11 @@ func (t *Inviter) BindInvCode(upper string, user string, singerMessage string) (
 	return "", nil
 }
 
-func (t *Inviter) UpdateTradeVolume(user string, amount decimal.Decimal) {
+func (t *Inviter) UpdateTradeVolume(user string, amount decimal.Decimal) error {
+	var userInfo *User
 	userChecksum := common.HexToAddress(user).Hex()
+	logrus.Infof("UpdateTradeVolume")
+
 	if userInfo, ok := t.userinfos[userChecksum]; ok {
 		// 先更新自己的交易量
 		userInfo.tradeVolume = userInfo.tradeVolume.Add(amount)
@@ -216,30 +223,43 @@ func (t *Inviter) UpdateTradeVolume(user string, amount decimal.Decimal) {
 			userInfo.role = PERSONAL
 		}
 
-		if userInfo.upper == "" {
-			return
-		}
-		// 更新上级的直推奖励 tradeVolLowers
-		if upperInfo, ok := t.userinfos[userInfo.upper]; ok {
-			upperInfo.tradeVolLowers.Add(amount)
-			if upperInfo.tradeVolLowers.GreaterThanOrEqual(decimal.NewFromInt(100000)) {
-				upperInfo.role = TEAM_LEADER
-			}
-
-			// 更新上级链条的伞下收益
-			// TODO 一笔交易量计入直推奖励的同时，计入散装奖励吗，这里的做法暂时计入
-			tmpAddress := userInfo.upper
-			for true {
-				info := t.userinfos[tmpAddress]
-				if info.upper == "" {
-					break
+		if userInfo.upper != "" {
+			// 更新上级的直推奖励 tradeVolLowers
+			if upperInfo, ok := t.userinfos[userInfo.upper]; ok {
+				upperInfo.tradeVolLowers = upperInfo.tradeVolLowers.Add(amount)
+				if upperInfo.tradeVolLowers.GreaterThanOrEqual(decimal.NewFromInt(100000)) {
+					upperInfo.role = TEAM_LEADER
 				}
-				info.tradeVolAll.Add(amount)
-				tmpAddress = info.upper
-			}
 
-			// 如果上面todo不计入 upperInfo.tradeVolAll -= amount
+				// 更新数据库
+				uppertable := models.UserTable{
+					Self:        upperInfo.self,
+					TradeVolume: upperInfo.tradeVolLowers.String(),
+					Role:        int(upperInfo.role),
+				}
+				uppertable.UpdateTradeVolLowers()
+
+				// 更新上级链条的伞下收益
+				// TODO 一笔交易量计入直推奖励的同时，计入散装奖励吗，这里的做法暂时计入
+				tmpAddress := userInfo.upper
+				for true {
+					info := t.userinfos[tmpAddress]
+					if info.upper == "" {
+						break
+					}
+					info.tradeVolAll = info.tradeVolAll.Add(amount)
+					tmpAddress = info.upper
+
+					tmpuppertable := models.UserTable{
+						Self:        info.self,
+						TradeVolAll: info.tradeVolAll.String(),
+					}
+					tmpuppertable.UpdateTradeVolAll()
+				}
+				// 如果上面todo不计入 upperInfo.tradeVolAll -= amount
+			}
 		}
+
 	} else {
 		// 只更新自己的交易量
 		userInfo := &User{
@@ -248,20 +268,78 @@ func (t *Inviter) UpdateTradeVolume(user string, amount decimal.Decimal) {
 		t.userinfos[userChecksum] = userInfo
 	}
 	// 更新数据库
+	usertable := models.UserTable{
+		Self:        userChecksum,
+		TradeVolume: userInfo.tradeVolume.String(),
+		Role:        int(userInfo.role),
+	}
+	return usertable.UpdateTradeVolume()
+
 }
 
-func (t *Inviter) UpdateLpRewards(user string, amount decimal.Decimal) {
+func (t *Inviter) UpdateLpRewards(user string, amount decimal.Decimal) error {
 	userChecksum := common.HexToAddress(user).Hex()
-	if userInfo, ok := t.userinfos[userChecksum]; ok {
+	logrus.Infof("UpdateLpRewards")
+	logrus.Infof("UpdateLpRewards amount %v", amount.String())
+	userInfo, ok := t.userinfos[userChecksum]
+	if ok {
 		// 更新自己的lp奖励
-		userInfo.lpRewards.Add(amount)
+		userInfo.lpRewards = userInfo.lpRewards.Add(amount)
+		logrus.Infof("UpdateLpRewards update amount %v", userInfo.lpRewards.String())
 	} else {
-		userInfo := &User{
+		userInfo = &User{
+			self:      userChecksum,
 			lpRewards: amount,
 		}
 		t.userinfos[userChecksum] = userInfo
 	}
 	// 更新数据库
+	logrus.Infof("UpdateLpRewards %v", userInfo.lpRewards.String())
+	usertable := models.UserTable{
+		Self:      userChecksum,
+		LpRewards: userInfo.lpRewards.String(),
+	}
+	logrus.Infof("usertable %v", usertable.LpRewards)
+
+	return usertable.UpdateLpRewards()
+}
+
+type Users struct {
+	Users []string `json:"users"`
+}
+
+func (t *Inviter) ProcessPresellUsersRewards() {
+	// 1、读取json用户列表
+	jsonFile, err := os.Open("./files/presell_users.json")
+	defer jsonFile.Close()
+	byteValue, _ := ioutil.ReadAll(jsonFile)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	var users Users
+	if err := json.Unmarshal(byteValue, &users); err != nil {
+		fmt.Println(err)
+	}
+
+	// 2、为json列表用户的upper更新信息
+	for _, user := range users.Users {
+		checkSumUser := common.HexToAddress(user).String()
+		if userInfo, ok := t.userinfos[checkSumUser]; ok {
+			if upperInfo, ok := t.userinfos[userInfo.upper]; ok {
+				upperInfo.totalReward = upperInfo.totalReward.Add(decimal.NewFromInt(200))
+				// 3、记录数据库
+				usertable := models.UserTable{
+					Self:        userInfo.upper,
+					TotalReward: upperInfo.totalReward.String(),
+				}
+				usertable.UpdateTotalReward()
+			}
+
+		}
+		fmt.Println(user)
+	}
+
 }
 
 // 添加排序代码

@@ -6,7 +6,11 @@ package blockscan
 
 import (
 	"context"
+	"ctf/core"
+	"ctf/models"
 	"ctf/utils"
+
+	"github.com/shopspring/decimal"
 
 	ethereum_watcher "github.com/HydroProtocol/ethereum-watcher"
 	"github.com/HydroProtocol/ethereum-watcher/blockchain"
@@ -26,9 +30,11 @@ const (
 var ERC20_transfer = []string{"0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"}
 
 var ethrpc *rpc.EthBlockChainRPC
+var blockscan models.BlockScan
 
 func tradeVolumeHandle(from, to int, receiptLogs []blockchain.IReceiptLog, isUpToHighestBlock bool) error {
 	logrus.Infof("len: %v", len(receiptLogs))
+	var usdtAmount decimal.Decimal
 
 	for _, log := range receiptLogs {
 
@@ -58,7 +64,8 @@ func tradeVolumeHandle(from, to int, receiptLogs []blockchain.IReceiptLog, isUpT
 						subTo := common.HexToAddress(subTopics[2]).String()
 						if (subFrom == CTF_USDT_PAIR || subTo == CTF_USDT_PAIR) && subTo != USDT_BLACK {
 							usdtWeiamount, _ := plugin.HexToDecimal(subLog.GetData())
-							logrus.Infof("Usdt amount: %v", utils.WeiToEth(usdtWeiamount))
+							usdtAmount = utils.WeiToEth(usdtWeiamount)
+							logrus.Infof("Usdt amount: %v", usdtAmount)
 						}
 					}
 				}
@@ -69,9 +76,20 @@ func tradeVolumeHandle(from, to int, receiptLogs []blockchain.IReceiptLog, isUpT
 				user = from
 			}
 			logrus.Infof("user: %v", common.HexToAddress(user))
+
+			//  同步数据
+			if err := core.InviterHandle.UpdateTradeVolume(common.HexToAddress(user).String(), usdtAmount); err != nil {
+				logrus.Errorf("Trade Volume Write to database: %v", err)
+			}
+
+			blockscan.ScanType = 0
+			blockscan.BlockNumber = int64(log.GetBlockNum() + 1)
+			if err := blockscan.UptadeBlockNumber(); err != nil {
+				logrus.Errorf("Trade Volume Write to database block: %v", err)
+			}
 		}
-		// TODO 同步数据，同步区块高度
 	}
+
 	return nil
 }
 
@@ -79,13 +97,18 @@ func ScanTradeVolume() {
 
 	api := "https://blissful-damp-owl.bsc-testnet.discover.quiknode.pro/04dff7903bb2526b98ec1a883d9dbc6b45bb3b6e/"
 	startBlockNum := 26845584
+	blockNumber := int(blockscan.GetNumber(0))
+	if blockNumber < startBlockNum {
+		blockNumber = startBlockNum
+	}
+
 	contractAdx := CTF_CONTRACT
 	ethrpc = rpc.NewEthRPC(api)
 
 	receiptLogWatcher := ethereum_watcher.NewReceiptLogWatcher(
 		context.Background(),
 		api,
-		startBlockNum,
+		blockNumber,
 		contractAdx,
 		ERC20_transfer,
 		tradeVolumeHandle,
