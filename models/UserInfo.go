@@ -126,7 +126,7 @@ func (u UserTable) GetLpRewardsRank(offset uint64, limit uint64) ([]UserTable, i
 	}
 
 	var count int64
-	result = db.Model(&UserTable{}).Where("cast(lp_rewards as double precision) > ?", 0).Count(&count)
+	result = db.Model(&UserTable{}).Where("cast(lp_rewards as DECIMAL(10,6)) > ?", 0).Count(&count)
 	if result.Error != nil {
 		return nil, 0, result.Error
 	}
@@ -141,7 +141,7 @@ func (u UserTable) GetTotalRewardRanks(offset uint64, limit uint64) ([]UserTable
 	}
 
 	var count int64
-	result = db.Model(&UserTable{}).Where("cast(total_reward as double precision) > ?", 0).Count(&count)
+	result = db.Model(&UserTable{}).Where("cast(total_reward as DECIMAL(10,6)) > ?", 0).Count(&count)
 	if result.Error != nil {
 		return nil, 0, result.Error
 	}
