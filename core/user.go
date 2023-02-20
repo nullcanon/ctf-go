@@ -456,7 +456,7 @@ func (t *Inviter) GetTradeVolumeAndRewards(address string) (string, string) {
 	if !ok {
 		return "0", "0"
 	}
-	return user.totalReward.String(), user.totalReward.String()
+	return user.tradeVolume.String(), user.totalReward.String()
 }
 
 func (t *Inviter) GetLowersTradeVolumeAndRewards(address string) (string, string) {
