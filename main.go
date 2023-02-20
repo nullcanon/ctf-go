@@ -21,9 +21,6 @@ func setupRouter() *gin.Engine {
 	// Disable Console Color
 	// gin.DisableConsoleColor()
 
-	go blockscan.ScanTradeVolume()
-	go blockscan.ScanLpRewards()
-
 	r := gin.Default()
 	r.Use(Cors.Cors())
 
@@ -45,6 +42,8 @@ func setupRouter() *gin.Engine {
 
 	var err error
 	core.InviterHandle, err = core.NewInviter()
+	go blockscan.ScanTradeVolume()
+	go blockscan.ScanLpRewards()
 	if err != nil {
 		fmt.Println("inviterHandle init error", err.Error())
 	}
