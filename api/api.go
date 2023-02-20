@@ -138,7 +138,7 @@ func (a *Api) GetBuyBackDetil() ([]BuyBackDataDetail, error) {
 	return []BuyBackDataDetail{
 		{
 			Id:        1,
-			Timestamp: 1676903961,
+			Timestamp: 1676903961000,
 			Amount:    "4398.42",
 			Link:      "https://bscscan.com/tx/0x23f28d6a51e7214319186723bdce4fe9bfd0c7eb51f40e01a433990948280ae3",
 		},
