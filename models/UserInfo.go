@@ -134,14 +134,14 @@ func (u UserTable) UpdateLpRewards() error {
 
 func (u UserTable) GetLpRewardsRank(offset uint64, limit uint64) ([]UserTable, int64, error) {
 	var users []UserTable
-	result := db.Order("CAST(lp_rewards AS DECIMAL(10,6)) DESC").Offset(offset).Limit(limit).Find(&users)
+	result := db.Order("CAST(lp_rewards AS DECIMAL(10,2)) DESC").Offset(offset).Limit(limit).Find(&users)
 	if result.Error != nil {
 		// 处理错误
 		return nil, 0, result.Error
 	}
 
 	var count int64
-	result = db.Model(&UserTable{}).Where("cast(lp_rewards as DECIMAL(10,6)) > ?", 0).Count(&count)
+	result = db.Model(&UserTable{}).Where("cast(lp_rewards as DECIMAL(10,2)) > ?", 0).Count(&count)
 	if result.Error != nil {
 		return nil, 0, result.Error
 	}
@@ -156,7 +156,7 @@ func (u UserTable) GetTotalRewardRanks(offset uint64, limit uint64) ([]UserTable
 	}
 
 	var count int64
-	result = db.Model(&UserTable{}).Where("cast(total_reward as DECIMAL(10,6)) > ?", 0).Count(&count)
+	result = db.Model(&UserTable{}).Where("cast(total_reward as DECIMAL(10,2)) > ?", 0).Count(&count)
 	if result.Error != nil {
 		return nil, 0, result.Error
 	}
@@ -171,7 +171,7 @@ func (u UserTable) GetTradeVolumeTotal() (string, error) {
 
 	// var tradeVolumeResult TradeVolumeResult
 	var tradeVolumeResult TradeVolumeResult
-	result := db.Model(&UserTable{}).Select("sum(cast(trade_volume as DECIMAL(10,6))) as total").Scan(&tradeVolumeResult)
+	result := db.Model(&UserTable{}).Select("sum(cast(trade_volume as DECIMAL(10,2))) as total").Scan(&tradeVolumeResult)
 	if result.Error != nil {
 		// 处理错误
 		return "0", result.Error
@@ -186,7 +186,7 @@ func (u UserTable) GetLpRewradsTotal() (string, error) {
 
 	// var tradeVolumeResult TradeVolumeResult
 	var tradeVolumeResult TradeVolumeResult
-	result := db.Model(&UserTable{}).Select("sum(cast(lp_rewards as DECIMAL(10,6))) as total").Scan(&tradeVolumeResult)
+	result := db.Model(&UserTable{}).Select("sum(cast(lp_rewards as DECIMAL(10,2))) as total").Scan(&tradeVolumeResult)
 	if result.Error != nil {
 		// 处理错误
 		return "0", result.Error
