@@ -261,11 +261,10 @@ func (t *Inviter) UpdateTradeVolume(user string, amount decimal.Decimal) error {
 				uppertable.UpdateTradeVolLowers()
 
 				// 更新上级链条的伞下收益
-				// TODO 一笔交易量计入直推奖励的同时，计入散装奖励吗，这里的做法暂时计入
 				tmpAddress := userInfo.upper
 				for true {
 					info := t.userinfos[tmpAddress]
-					if info.upper == "" || info.role == TEAM_LEADER {
+					if info.upper == "" {
 						break
 					}
 					info.tradeVolAll = info.tradeVolAll.Add(amount)
@@ -277,8 +276,10 @@ func (t *Inviter) UpdateTradeVolume(user string, amount decimal.Decimal) error {
 						TradeVolAll: info.tradeVolAll.String(),
 					}
 					tmpuppertable.UpdateTradeVolAll()
+					if info.role == TEAM_LEADER {
+						break
+					}
 				}
-				// 如果上面todo不计入 upperInfo.tradeVolAll -= amount
 			}
 		}
 
