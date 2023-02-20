@@ -6,6 +6,7 @@ package blockscan
 
 import (
 	"context"
+	"ctf/config"
 	"ctf/core"
 	"ctf/models"
 	"ctf/utils"
@@ -26,6 +27,13 @@ const (
 	USDT          = "0x8538d1641ad855db9e36fc1c7dc84236f104bb4a"
 	CTF_USDT_PAIR = "0x0bAF10bCF766f47F5F35877799B419792bE1cB5f"
 )
+
+// const (
+// 	CTF_CONTRACT  = "0x5fBfF2e6dF6ba93C7A00E173ba598FfCe96A519A"
+// 	USDT_BLACK    = "0xbBc2912Cba23890D2a3d7a4a2c04b108F0f38dD2" //代币合约中间地址
+// 	USDT          = "0x55d398326f99059fF775485246999027B3197955"
+// 	CTF_USDT_PAIR = "0x3cE249f278803E7934af8F6D0c6380FA6995f8EA"
+// )
 
 var ERC20_transfer = []string{"0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"}
 
@@ -94,9 +102,9 @@ func tradeVolumeHandle(from, to int, receiptLogs []blockchain.IReceiptLog, isUpT
 }
 
 func ScanTradeVolume() {
-
-	api := "https://blissful-damp-owl.bsc-testnet.discover.quiknode.pro/04dff7903bb2526b98ec1a883d9dbc6b45bb3b6e/"
-	startBlockNum := 26845584
+	api := config.Global.Api
+	// api := "https://blissful-damp-owl.bsc-testnet.discover.quiknode.pro/04dff7903bb2526b98ec1a883d9dbc6b45bb3b6e/"
+	startBlockNum := config.Global.StartBlockNum
 	blockNumber := int(blockscan.GetNumber(0))
 	if blockNumber < startBlockNum {
 		blockNumber = startBlockNum

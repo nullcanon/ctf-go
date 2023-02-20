@@ -24,9 +24,10 @@ func (a *Api) GetMyInfo(user string) (MyInfo, error) {
 	if err != nil {
 		return MyInfo{}, err
 	}
+	volume, _ := core.InviterHandle.GetTradeVolumeAndRewards(user)
 
 	return MyInfo{
-		TradeVolume:  "0",
+		TradeVolume:  volume,
 		PersonalTime: 0,
 		CommuniyTime: 0,
 		UpperAddress: upper,
@@ -43,12 +44,13 @@ type InvData struct {
 
 func (a *Api) GetInvData(user string, role int) (InvData, error) {
 	invAmount := core.InviterHandle.GetLowersAmount(user)
+	volume, commission := core.InviterHandle.GetTradeVolumeAndRewards(user)
 	return InvData{
 		Received:       "0",
-		Available:      "0",
+		Available:      commission,
 		InvAmount:      invAmount,
 		LowTradeAmount: 0,
-		LowTradeVolume: "0",
+		LowTradeVolume: volume,
 	}, nil
 }
 
@@ -78,9 +80,11 @@ type DataDetail struct {
 
 func (a *Api) GetInvDataDetail(user string, role int, sub int, offset uint64, limit uint64) (DataDetail, error) {
 	var (
-		records interface{}
-		total   uint64
-		err     error
+		records    interface{}
+		total      uint64
+		err        error
+		volume     string
+		commission string
 	)
 	if sub == 0 {
 		var data []core.ReferalsData
@@ -90,11 +94,16 @@ func (a *Api) GetInvDataDetail(user string, role int, sub int, offset uint64, li
 		}
 		records = data
 	} else if sub == 1 {
+		if role == 0 {
+			volume, commission = core.InviterHandle.GetLowersTradeVolumeAndRewards(user)
+		} else {
+			volume, commission = core.InviterHandle.GetLowersTreeTradeVolumeAndRewards(user)
+		}
 		records = []TradingData{
 			{
 				Address:    "",
-				Volume:     "0",
-				Commission: "0",
+				Volume:     volume,
+				Commission: commission,
 			},
 		}
 	} else {
@@ -137,7 +146,7 @@ func (a *Api) GetBuyBackDetil() ([]BuyBackDataDetail, error) {
 }
 
 func (a *Api) GetLpAwardedBonus() (string, error) {
-	return "0", nil
+	return models.UserTable{}.GetLpRewradsTotal()
 }
 
 func (a *Api) GetLpBonusRank(offset uint64, limit uint64) (DataDetail, error) {

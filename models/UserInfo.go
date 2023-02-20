@@ -167,6 +167,21 @@ func (u UserTable) GetTradeVolumeTotal() (string, error) {
 	return strconv.FormatFloat(tradeVolumeResult.Total, 'f', 2, 64), nil
 }
 
+func (u UserTable) GetLpRewradsTotal() (string, error) {
+
+	// var tradeVolumeResult TradeVolumeResult
+	var tradeVolumeResult TradeVolumeResult
+	result := db.Model(&UserTable{}).Select("sum(cast(lp_rewards as DECIMAL(10,6))) as total").Scan(&tradeVolumeResult)
+	if result.Error != nil {
+		// 处理错误
+		return "0", result.Error
+	}
+
+	logrus.Infof("GetLpRewradsTotal ", tradeVolumeResult.Total)
+
+	return strconv.FormatFloat(tradeVolumeResult.Total, 'f', 2, 64), nil
+}
+
 // func (u UserTable) FirstOrCreateUser(self string, userinfo UserTable) error {
 // 	return db.Where(User{Name: "new_name"}).Attrs(User{Age: 18}).FirstOrCreate(&user)
 // }

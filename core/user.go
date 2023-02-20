@@ -449,6 +449,33 @@ func (t *Inviter) GetLowersAmount(address string) uint64 {
 	return 0
 }
 
+func (t *Inviter) GetTradeVolumeAndRewards(address string) (string, string) {
+	userChecksum := common.HexToAddress(address).Hex()
+	user, ok := t.userinfos[userChecksum]
+	if !ok {
+		return "0", "0"
+	}
+	return user.totalReward.String(), user.totalReward.String()
+}
+
+func (t *Inviter) GetLowersTradeVolumeAndRewards(address string) (string, string) {
+	userChecksum := common.HexToAddress(address).Hex()
+	user, ok := t.userinfos[userChecksum]
+	if !ok {
+		return "0", "0"
+	}
+	return user.tradeVolLowers.String(), user.totalReward.String()
+}
+
+func (t *Inviter) GetLowersTreeTradeVolumeAndRewards(address string) (string, string) {
+	userChecksum := common.HexToAddress(address).Hex()
+	user, ok := t.userinfos[userChecksum]
+	if !ok {
+		return "0", "0"
+	}
+	return user.tradeVolAll.String(), user.totalReward.String()
+}
+
 // func (t *Inviter) GetTotalLpRewards() uint64 {
 
 // }

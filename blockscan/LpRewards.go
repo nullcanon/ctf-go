@@ -3,6 +3,7 @@ package blockscan
 
 import (
 	"context"
+	"ctf/config"
 	"ctf/core"
 	"ctf/utils"
 
@@ -53,8 +54,9 @@ func lpRewardsHandle(from, to int, receiptLogs []blockchain.IReceiptLog, isUpToH
 
 func ScanLpRewards() {
 
-	api := "https://blissful-damp-owl.bsc-testnet.discover.quiknode.pro/04dff7903bb2526b98ec1a883d9dbc6b45bb3b6e/"
-	startBlockNum := 26846722
+	// api := "https://blissful-damp-owl.bsc-testnet.discover.quiknode.pro/04dff7903bb2526b98ec1a883d9dbc6b45bb3b6e/"
+	api := config.Global.Api
+	startBlockNum := config.Global.StartBlockNum
 	blockNumber := int(blockscan.GetNumber(1))
 	if blockNumber < startBlockNum {
 		blockNumber = startBlockNum

@@ -2,6 +2,7 @@ package main
 
 import (
 	"ctf/api"
+	"ctf/blockscan"
 	"ctf/config"
 	"ctf/core"
 	"ctf/jsonrpc"
@@ -20,8 +21,8 @@ func setupRouter() *gin.Engine {
 	// Disable Console Color
 	// gin.DisableConsoleColor()
 
-	// go blockscan.ScanTradeVolume()
-	// go blockscan.ScanLpRewards()
+	go blockscan.ScanTradeVolume()
+	go blockscan.ScanLpRewards()
 
 	r := gin.Default()
 	r.Use(Cors.Cors())

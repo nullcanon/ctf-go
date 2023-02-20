@@ -9,8 +9,9 @@ type MysqlConfig struct {
 	Db       string `mapstructure:"db" json:"db"`
 }
 
-
 type ServerConfig struct {
-	Name            string      `mapstructure:"name" json:"name"`
-	MysqlInfo       MysqlConfig `mapstructure:"mysql" json:"mysql"`
+	Name          string      `mapstructure:"name" json:"name"`
+	Api           string      `mapstructure:"api" json:"api"`
+	StartBlockNum int         `mapstructure:"start_block" json:"start_block"`
+	MysqlInfo     MysqlConfig `mapstructure:"mysql" json:"mysql"`
 }
