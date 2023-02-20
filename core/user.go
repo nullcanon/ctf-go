@@ -82,6 +82,7 @@ func (t *Inviter) fatchData() error {
 		var lowers []string
 		userlower := models.UserLowersTable{}
 		userlower.FatchLowers(user.Self, &lowers)
+		logrus.Infof("UpdateTradeVolume ", user.Self)
 		t.userinfos[user.Self] = &User{
 			timestamp:      user.Timestamp,
 			totalReward:    decimal.RequireFromString(user.TotalReward),
@@ -164,7 +165,6 @@ func (t *Inviter) BindInvCode(upper string, user string, singerMessage string) (
 
 	// Chek repeated invitations
 	for tmpUser := userChecksum; ; {
-		// TODO 互相绑定时这一行崩溃
 		if u, ok := t.userinfos[tmpUser]; ok {
 			if u.upper == userChecksum {
 				return "", errors.New("Repeated invitations")
@@ -232,12 +232,14 @@ func (t *Inviter) UpdateTradeVolume(user string, amount decimal.Decimal) error {
 	defer t.mutex.Unlock()
 	var userInfo *User
 	userChecksum := common.HexToAddress(user).Hex()
-	logrus.Infof("UpdateTradeVolume")
+	logrus.Infof("UpdateTradeVolume", amount)
 	userInfo, ok := t.userinfos[userChecksum]
 	if ok {
 		// 先更新自己的交易量
 		userInfo.tradeVolume = userInfo.tradeVolume.Add(amount)
-		userInfo.totalReward = getSubCoinAmount(amount, selfRate)
+		logrus.Infof("getSubCoinAmount------", getSubCoinAmount(amount, selfRate))
+		userInfo.totalReward = userInfo.totalReward.Add(getSubCoinAmount(amount, selfRate))
+		logrus.Infof("UpdateTradeVolume------", userInfo.totalReward.String())
 		// 如果自己交易量达到3000刀，更新角色为 PERSONAL
 		if userInfo.tradeVolume.GreaterThanOrEqual(decimal.NewFromInt(3000)) {
 			userInfo.role = PERSONAL
@@ -247,18 +249,24 @@ func (t *Inviter) UpdateTradeVolume(user string, amount decimal.Decimal) error {
 			// 更新上级的直推奖励 tradeVolLowers
 			if upperInfo, ok := t.userinfos[userInfo.upper]; ok {
 				upperInfo.tradeVolLowers = upperInfo.tradeVolLowers.Add(amount)
-				upperInfo.totalReward = getSubCoinAmount(amount, lowerRate)
+				upperInfo.totalReward = upperInfo.totalReward.Add(getSubCoinAmount(amount, lowerRate))
 				if upperInfo.tradeVolLowers.GreaterThanOrEqual(decimal.NewFromInt(30000)) {
 					upperInfo.role = TEAM_LEADER
 				}
 
 				// 更新数据库
 				uppertable := models.UserTable{
-					Self:        upperInfo.self,
-					TradeVolume: upperInfo.tradeVolLowers.String(),
-					Role:        int(upperInfo.role),
+					Self:           upperInfo.self,
+					TradeVolLowers: upperInfo.tradeVolLowers.String(),
+					TotalReward:    upperInfo.totalReward.String(),
+					Role:           int(upperInfo.role),
 				}
 				uppertable.UpdateTradeVolLowers()
+				uppertable.Update(map[string]interface{}{
+					"trade_vol_lowers": uppertable.TradeVolLowers,
+					"total_reward":     uppertable.TotalReward,
+					"role":             uppertable.Role,
+				})
 
 				// 更新上级链条的伞下收益
 				tmpAddress := userInfo.upper
@@ -268,14 +276,17 @@ func (t *Inviter) UpdateTradeVolume(user string, amount decimal.Decimal) error {
 						break
 					}
 					info.tradeVolAll = info.tradeVolAll.Add(amount)
-					info.totalReward = getSubCoinAmount(amount, treeRate)
+					info.totalReward = info.totalReward.Add(getSubCoinAmount(amount, treeRate))
 					tmpAddress = info.upper
 
 					tmpuppertable := models.UserTable{
 						Self:        info.self,
 						TradeVolAll: info.tradeVolAll.String(),
+						TotalReward: info.totalReward.String(),
 					}
-					tmpuppertable.UpdateTradeVolAll()
+					logrus.Infof("trade_vol_all------", tmpuppertable.TradeVolAll)
+					tmpuppertable.Update(map[string]interface{}{
+						"trade_vol_all": tmpuppertable.TradeVolAll, "total_reward": tmpuppertable.TotalReward})
 					if info.role == TEAM_LEADER {
 						break
 					}
@@ -288,8 +299,10 @@ func (t *Inviter) UpdateTradeVolume(user string, amount decimal.Decimal) error {
 		userInfo = &User{
 			self:        userChecksum,
 			tradeVolume: amount,
+			role:        NOMAL,
+			totalReward: decimal.NewFromInt(0),
 		}
-		userInfo.totalReward = getSubCoinAmount(amount, selfRate)
+		userInfo.totalReward = userInfo.totalReward.Add(getSubCoinAmount(amount, selfRate))
 		t.userinfos[userChecksum] = userInfo
 	}
 	// 更新数据库
@@ -297,9 +310,12 @@ func (t *Inviter) UpdateTradeVolume(user string, amount decimal.Decimal) error {
 		Self:        userChecksum,
 		TradeVolume: userInfo.tradeVolume.String(),
 		Role:        int(userInfo.role),
+		TotalReward: userInfo.totalReward.String(),
 	}
-	return usertable.UpdateTradeVolume()
-
+	logrus.Infof("usertable------", usertable.TradeVolume)
+	logrus.Infof("usertable TotalReward------", usertable.TotalReward)
+	return usertable.Update(map[string]interface{}{
+		"trade_volume": usertable.TradeVolume, "total_reward": usertable.TotalReward, "role": usertable.Role})
 }
 
 func (t *Inviter) UpdateLpRewards(user string, amount decimal.Decimal) error {

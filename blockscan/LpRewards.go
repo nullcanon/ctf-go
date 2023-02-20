@@ -5,6 +5,7 @@ import (
 	"context"
 	"ctf/config"
 	"ctf/core"
+	"ctf/models"
 	"ctf/utils"
 
 	ethereum_watcher "github.com/HydroProtocol/ethereum-watcher"
@@ -42,9 +43,12 @@ func lpRewardsHandle(from, to int, receiptLogs []blockchain.IReceiptLog, isUpToH
 		if err := core.InviterHandle.UpdateLpRewards(recv, utils.WeiToEth(weiamount)); err != nil {
 			logrus.Errorf("Lp rewards Write to database rewards: %v", err)
 		}
-		blockscan.ScanType = 1
-		blockscan.BlockNumber = int64(log.GetBlockNum() + 1)
-		if err := blockscan.UptadeBlockNumber(); err != nil {
+
+		block := models.BlockScan{
+			ScanType:    1,
+			BlockNumber: int64(log.GetBlockNum() + 1),
+		}
+		if err := block.UptadeBlockNumber(); err != nil {
 			logrus.Errorf("Lp rewards Write to database block: %v", err)
 		}
 	}

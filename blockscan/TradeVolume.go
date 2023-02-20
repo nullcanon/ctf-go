@@ -21,19 +21,19 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const (
-	CTF_CONTRACT  = "0x29a3DAa1bf8DE08a8afE3e29E36Fa2797f7a37b5"
-	USDT_BLACK    = "0xb5151A092593ca413fC8782Cd92904F4f3d5F2f8" //代币合约中间地址
-	USDT          = "0x8538d1641ad855db9e36fc1c7dc84236f104bb4a"
-	CTF_USDT_PAIR = "0x0bAF10bCF766f47F5F35877799B419792bE1cB5f"
-)
-
 // const (
-// 	CTF_CONTRACT  = "0x5fBfF2e6dF6ba93C7A00E173ba598FfCe96A519A"
-// 	USDT_BLACK    = "0xbBc2912Cba23890D2a3d7a4a2c04b108F0f38dD2" //代币合约中间地址
-// 	USDT          = "0x55d398326f99059fF775485246999027B3197955"
-// 	CTF_USDT_PAIR = "0x3cE249f278803E7934af8F6D0c6380FA6995f8EA"
+// 	CTF_CONTRACT  = "0x29a3DAa1bf8DE08a8afE3e29E36Fa2797f7a37b5"
+// 	USDT_BLACK    = "0xb5151A092593ca413fC8782Cd92904F4f3d5F2f8" //代币合约中间地址
+// 	USDT          = "0x8538d1641ad855db9e36fc1c7dc84236f104bb4a"
+// 	CTF_USDT_PAIR = "0x0bAF10bCF766f47F5F35877799B419792bE1cB5f"
 // )
+
+const (
+	CTF_CONTRACT  = "0x5fBfF2e6dF6ba93C7A00E173ba598FfCe96A519A"
+	USDT_BLACK    = "0xbBc2912Cba23890D2a3d7a4a2c04b108F0f38dD2" //代币合约中间地址
+	USDT          = "0x55d398326f99059ff775485246999027b3197955"
+	CTF_USDT_PAIR = "0x3cE249f278803E7934af8F6D0c6380FA6995f8EA"
+)
 
 var ERC20_transfer = []string{"0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"}
 
@@ -90,9 +90,11 @@ func tradeVolumeHandle(from, to int, receiptLogs []blockchain.IReceiptLog, isUpT
 				logrus.Errorf("Trade Volume Write to database: %v", err)
 			}
 
-			blockscan.ScanType = 0
-			blockscan.BlockNumber = int64(log.GetBlockNum() + 1)
-			if err := blockscan.UptadeBlockNumber(); err != nil {
+			block := models.BlockScan{
+				ScanType:    0,
+				BlockNumber: int64(log.GetBlockNum() + 1),
+			}
+			if err := block.UptadeBlockNumber(); err != nil {
 				logrus.Errorf("Trade Volume Write to database block: %v", err)
 			}
 		}

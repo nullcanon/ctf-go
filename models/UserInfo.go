@@ -100,6 +100,21 @@ func (u UserTable) UpdateTradeVolAll() error {
 	}
 }
 
+func (u UserTable) Update(args map[string]interface{}) error {
+	var userinfo UserTable
+	result := db.First(&userinfo, "self = ?", u.Self)
+
+	if result.Error == nil {
+		db.Model(&UserTable{}).Where("self = ?", u.Self).Update(args)
+	}
+
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return u.CreateUser(u)
+	} else {
+		return result.Error
+	}
+}
+
 // func (u UserTable) UpdateReceivedReward(userinfo UserTable) error {
 // }
 
