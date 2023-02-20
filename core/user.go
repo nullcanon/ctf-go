@@ -228,8 +228,8 @@ func getSubCoinAmount(tradeAmount decimal.Decimal, rate decimal.Decimal) decimal
 }
 
 func (t *Inviter) UpdateTradeVolume(user string, amount decimal.Decimal) error {
-	// t.mutex.Lock()
-	// defer t.mutex.Unlock()
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
 	var userInfo *User
 	userChecksum := common.HexToAddress(user).Hex()
 	logrus.Infof("UpdateTradeVolume")
@@ -303,8 +303,8 @@ func (t *Inviter) UpdateTradeVolume(user string, amount decimal.Decimal) error {
 }
 
 func (t *Inviter) UpdateLpRewards(user string, amount decimal.Decimal) error {
-	// t.mutex.Lock()
-	// defer t.mutex.Unlock()
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
 	userChecksum := common.HexToAddress(user).Hex()
 	logrus.Infof("UpdateLpRewards")
 	logrus.Infof("UpdateLpRewards amount %v", amount.String())
