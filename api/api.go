@@ -137,10 +137,10 @@ type BuyBackDataDetail struct {
 func (a *Api) GetBuyBackDetil() ([]BuyBackDataDetail, error) {
 	return []BuyBackDataDetail{
 		{
-			Id:        0,
-			Timestamp: 0,
-			Amount:    "0",
-			Link:      "https://bscscan.com/tx/0x0e2491b362b750edac36c61a215425d18d7ac8d37c9373bd4110f1005ab046a2",
+			Id:        1,
+			Timestamp: 1676903961,
+			Amount:    "4398.42",
+			Link:      "https://bscscan.com/tx/0x23f28d6a51e7214319186723bdce4fe9bfd0c7eb51f40e01a433990948280ae3",
 		},
 	}, nil
 }
