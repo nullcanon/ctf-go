@@ -475,6 +475,24 @@ func (t *Inviter) GetTradeVolumeAndRewards(address string) (string, string) {
 	return user.tradeVolume.String(), user.totalReward.String()
 }
 
+func (t *Inviter) GetLowersTradeAmount(address string) uint64 {
+	var counter int
+	userChecksum := common.HexToAddress(address).Hex()
+	user, ok := t.userinfos[userChecksum]
+	if !ok {
+		return 0
+	}
+	for index, value := range user.lowers {
+		lowerUser, ok := t.userinfos[value]
+		if ok {
+			if lowerUser.TradeVolume..GreaterThanOrEqual(decimal.NewFromInt(0) {
+				counter++
+			}
+		}
+	}
+	return counter
+}
+
 func (t *Inviter) GetLowersTradeVolumeAndRewards(address string) (string, string) {
 	userChecksum := common.HexToAddress(address).Hex()
 	user, ok := t.userinfos[userChecksum]
