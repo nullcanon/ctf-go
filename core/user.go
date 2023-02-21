@@ -476,16 +476,16 @@ func (t *Inviter) GetTradeVolumeAndRewards(address string) (string, string) {
 }
 
 func (t *Inviter) GetLowersTradeAmount(address string) uint64 {
-	var counter int
+	var counter uint64
 	userChecksum := common.HexToAddress(address).Hex()
 	user, ok := t.userinfos[userChecksum]
 	if !ok {
 		return 0
 	}
-	for index, value := range user.lowers {
+	for _, value := range user.lowers {
 		lowerUser, ok := t.userinfos[value]
 		if ok {
-			if lowerUser.TradeVolume..GreaterThanOrEqual(decimal.NewFromInt(0) {
+			if lowerUser.tradeVolume.GreaterThanOrEqual(decimal.NewFromInt(0)) {
 				counter++
 			}
 		}
