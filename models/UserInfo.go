@@ -179,7 +179,7 @@ func (u UserTable) GetTradeVolumeTotal() (string, error) {
 
 	logrus.Infof("GetTradeVolumeTotal ", tradeVolumeResult.Total)
 
-	return strconv.FormatFloat(tradeVolumeResult.Total, 'f', 2, 64), nil
+	return strconv.FormatFloat(tradeVolumeResult.Total / 2, 'f', 2, 64), nil
 }
 
 func (u UserTable) GetLpRewradsTotal() (string, error) {
