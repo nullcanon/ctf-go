@@ -143,6 +143,24 @@ func (a *Api) GetBuyBackDetil() ([]BuyBackDataDetail, error) {
 			Amount:    "4398.42",
 			Link:      "https://bscscan.com/tx/0x23f28d6a51e7214319186723bdce4fe9bfd0c7eb51f40e01a433990948280ae3",
 		},
+		{
+			Id:		  2,
+			Timestamp: 1677210923000,
+			Amount:    "1284.64",
+			Link:      "https://bscscan.com/tx/0xd13e3ea91e13a8b9a39d1feab52df93cea7b3ff666299ec1dc8e8f594a8c4bbb",
+		},
+		{
+			Id:		  3,
+			Timestamp: 1678356323000,
+			Amount:    "845.48",
+			Link:      "https://bscscan.com/tx/0xd9c747d16174309a519bac8b2b87a4a97fcd4ce7d044039f209ef4a7e285d756",
+		},
+		{
+			Id:		  4,
+			Timestamp: 1678696873000,
+			Amount:    "573.34",
+			Link:      "https://bscscan.com/tx/0xe70d6db39f48c98d0e38653e5ae1a1ef623772c3e455b6e8cd4892c01b2df313",
+		}
 	}, nil
 }
 
