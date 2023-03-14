@@ -164,12 +164,17 @@ func (t *Inviter) BindInvCode(upper string, user string, singerMessage string) (
 	}
 
 	// Chek repeated invitations
+	level := 0
 	for tmpUser := userChecksum; ; {
+		if level > 30 {
+			break
+		}
 		if u, ok := t.userinfos[tmpUser]; ok {
 			if u.upper == userChecksum {
 				return "", errors.New("Repeated invitations")
 			}
 			tmpUser = u.upper
+			level++
 		} else {
 			break
 		}
